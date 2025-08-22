@@ -137,10 +137,10 @@ def test_call_sora_api_job_failed(mock_client_class, azure_service: AzureOpenAIS
 }
 
     with pytest.raises(
-    Exception,
-    match="Video generation failed: Video generation failed due to content policy",
-):
-    azure_service._call_sora_api(request)
+        Exception,
+        match="Video generation failed: Video generation failed due to content policy",
+    ):
+        azure_service._call_sora_api(request)
 
 
 def test_get_video_status_existing(azure_service: AzureOpenAIService):
