@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Azure OpenAI Sora Video Generator</h1>
+            <p>Generate stunning videos using Azure OpenAI's Sora model</p>
+        </header>
+
+        <main>
+            <div class="video-form-container">
+                <form id="videoForm" class="video-form">
+                    <div class="form-group">
+                        <label for="prompt">Video Prompt</label>
+                        <textarea 
+                            id="prompt" 
+                            name="prompt" 
+                            placeholder="Describe the video you want to generate... e.g., 'A beautiful sunset over the ocean with waves crashing on the shore'"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="resolution">Resolution</label>
+                            <select id="resolution" name="resolution">
+                                <option value="1920x1080">1920x1080 (Full HD)</option>
+                                <option value="1280x720">1280x720 (HD)</option>
+                                <option value="1080x1920">1080x1920 (Vertical)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="duration">Duration (seconds)</label>
+                            <input type="number" id="duration" name="duration" min="1" max="60" value="5">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="generateBtn" class="generate-btn">
+                        <span>🎥 Generate Video</span>
+                    </button>
+                </form>
+            </div>
+
+            <div id="statusContainer" class="status-container" style="display: none;">
+                <div class="status-card">
+                    <h3>Video Generation Status</h3>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <p id="statusText">Initializing...</p>
+                    <div id="videoResult" class="video-result" style="display: none;">
+                        <video id="generatedVideo" controls style="max-width: 100%; height: auto;">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div class="video-actions">
+                            <button id="downloadBtn" class="download-btn">📥 Download Video</button>
+                            <button id="newVideoBtn" class="new-video-btn">🎬 Generate New Video</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorContainer" class="error-container" style="display: none;">
+                <div class="error-card">
+                    <h3>❌ Error</h3>
+                    <p id="errorMessage"></p>
+                    <button id="retryBtn" class="retry-btn">🔄 Try Again</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by Azure OpenAI Sora | <a href="/api/docs" target="_blank">API Documentation</a></p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', path='/script.js') }}"></script>
+</body>
+</html>

@@ -2,12 +2,16 @@
 
 import asyncio
 from contextlib import asynccontextmanager
-from typing import List
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from pathlib import Path
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from .models import VideoGenerationRequest, VideoStatus
 from .services.azure_openai import AzureOpenAIService
+from .routes import video
+from .config import settings
 
 
 # Global service instance
@@ -40,32 +44,39 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Setup paths
+BASE_DIR = Path(__file__).parent
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
 
-@app.post("/generate", response_model=dict)
-async def generate_video(request: VideoGenerationRequest):
-    """Generate a video using Azure OpenAI Sora."""
-    try:
-        video_id = await azure_service.generate_video(request)
-        return {"video_id": video_id, "status": "pending"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Create directories if they don't exist
+STATIC_DIR.mkdir(exist_ok=True)
+TEMPLATES_DIR.mkdir(exist_ok=True)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Setup templates
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+# Include API routes
+app.include_router(video.router)
 
 
-@app.get("/status/{video_id}", response_model=VideoStatus)
-async def get_video_status(video_id: str):
-    """Get the status of a video generation job."""
-    status = azure_service.get_video_status(video_id)
-    if not status:
-        raise HTTPException(status_code=404, detail="Video job not found")
-    return status
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "azure-openai-sora"}
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Serve the main web interface."""
+    return templates.TemplateResponse(
+        "index.html", 
+        {"request": request, "title": "Azure OpenAI Sora Video Generator"}
+    )
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app, 
+        host=settings.app_host, 
+        port=settings.app_port, 
+        debug=settings.app_debug
+    )

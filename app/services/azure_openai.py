@@ -1,12 +1,12 @@
 """Azure OpenAI service for video generation using Sora."""
 
 import asyncio
-import os
 import uuid
 from typing import Dict, Optional, Any
 from openai import AzureOpenAI
 
 from ..models import VideoGenerationRequest, VideoStatus
+from ..config import settings
 
 
 class AzureOpenAIService:
@@ -15,9 +15,9 @@ class AzureOpenAIService:
     def __init__(self):
         """Initialize the Azure OpenAI service."""
         self.client = AzureOpenAI(
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+            api_key=settings.azure_openai_api_key,
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_version=settings.azure_openai_api_version
         )
         self.video_jobs: Dict[str, VideoStatus] = {}
     
@@ -77,8 +77,11 @@ class AzureOpenAIService:
         """Get the status of a video generation job."""
         return self.video_jobs.get(video_id)
     
-    def cleanup_old_jobs(self, max_jobs: int = 50) -> None:
+    def cleanup_old_jobs(self, max_jobs: int = None) -> None:
         """Clean up old video jobs to prevent memory issues."""
+        if max_jobs is None:
+            max_jobs = settings.max_stored_jobs
+            
         if len(self.video_jobs) > max_jobs:
             # Keep only the most recent jobs
             sorted_jobs = sorted(self.video_jobs.items(), key=lambda x: x[0])

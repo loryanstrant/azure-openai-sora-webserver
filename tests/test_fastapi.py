@@ -17,7 +17,7 @@ def client(mock_env_vars):
 
 def test_health_endpoint(client):
     """Test the health check endpoint."""
-    response = client.get("/health")
+    response = client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
@@ -29,7 +29,7 @@ def test_lifespan_startup_shutdown():
     with patch('app.services.azure_openai.AzureOpenAI'):
         with TestClient(app) as client:
             # The lifespan context should have initialized the service
-            response = client.get("/health")
+            response = client.get("/api/health")
             assert response.status_code == 200
             # Cleanup happens automatically when context exits
 
@@ -56,15 +56,15 @@ def test_no_deprecation_warnings():
 def test_app_routes_exist(client):
     """Test that all expected routes exist and return proper status codes."""
     # Health endpoint should work
-    response = client.get("/health")
+    response = client.get("/api/health")
     assert response.status_code == 200
     
     # Generate endpoint should return validation error without proper payload (but not 404)
-    response = client.post("/generate")
+    response = client.post("/api/generate")
     assert response.status_code == 422  # Validation error, not 404
     
     # Status endpoint should return 404 for non-existent video (service is working)
-    response = client.get("/status/non-existent-id")
+    response = client.get("/api/status/non-existent-id")
     assert response.status_code == 404
     data = response.json()
     assert data["detail"] == "Video job not found"
