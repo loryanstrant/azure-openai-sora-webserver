@@ -1,14 +1,13 @@
 """FastAPI application for Azure OpenAI Sora video generation."""
 
-import asyncio
 from contextlib import asynccontextmanager
-from typing import List
+
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .models import VideoGenerationRequest, VideoStatus
 from .services.azure_openai import AzureOpenAIService
-
 
 # Global service instance
 azure_service = None
@@ -21,9 +20,9 @@ async def lifespan(app: FastAPI):
     global azure_service
     azure_service = AzureOpenAIService()
     print("Starting Azure OpenAI Sora Web Server...")
-    
+
     yield
-    
+
     # Shutdown
     print("Shutting down Azure OpenAI Sora Web Server...")
     # Clean up any pending tasks
@@ -37,8 +36,17 @@ app = FastAPI(
     title="Azure OpenAI Sora Video Generator",
     description="A web server for generating videos using Azure OpenAI Sora",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/")
+async def root():
+    """Serve the main web interface."""
+    return FileResponse("static/index.html")
 
 
 @app.post("/generate", response_model=dict)
@@ -48,7 +56,7 @@ async def generate_video(request: VideoGenerationRequest):
         video_id = await azure_service.generate_video(request)
         return {"video_id": video_id, "status": "pending"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/status/{video_id}", response_model=VideoStatus)
@@ -68,4 +76,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
