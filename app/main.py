@@ -3,8 +3,10 @@
 import asyncio
 from contextlib import asynccontextmanager
 from typing import List
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .models import VideoGenerationRequest, VideoStatus
 from .services.azure_openai import AzureOpenAIService
@@ -39,6 +41,20 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Mount static files
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/")
+async def serve_homepage():
+    """Serve the main web interface."""
+    static_file = static_dir / "index.html"
+    if static_file.exists():
+        return FileResponse(static_file)
+    return {"message": "Azure OpenAI Sora Video Generator API", "docs": "/docs"}
 
 
 @app.post("/generate", response_model=dict)
