@@ -130,12 +130,11 @@ def test_call_sora_api_job_failed(mock_client_class, azure_service: AzureOpenAIS
     # Mock job polling response (failed)
     mock_poll_response = MagicMock()
     mock_poll_response.json.return_value = {
-        "status": "failed",
-        "error": {
-            "message": "Video generation failed due to content policy"
-        }
+    "status": "failed",
+    "error": {
+        "message": "Video generation failed due to content policy"
     }
-    mock_client.get.return_value = mock_poll_response
+}
 
     with pytest.raises(
     Exception,
