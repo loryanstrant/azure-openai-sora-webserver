@@ -132,8 +132,8 @@ def test_call_sora_api_job_failed(mock_client_class, azure_service: AzureOpenAIS
     mock_poll_response.json.return_value = {
     "status": "failed",
     "error": {
-        "message": "Video generation failed due to content policy"
-    }
+        "message": "Video generation failed due to content policy",
+    },
 }
 
     with pytest.raises(
