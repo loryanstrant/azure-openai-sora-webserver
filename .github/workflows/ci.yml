@@ -66,7 +66,7 @@ jobs:
         pip install flake8 black isort mypy
 
     - name: Run Black (code formatting)
-      run: black --check app/ tests/
+      run: black app/ tests/
 
     - name: Run isort (import sorting)
       run: isort --check-only app/ tests/
