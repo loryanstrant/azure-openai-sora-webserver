@@ -1,8 +1,8 @@
 """Tests for Azure OpenAI service."""
 
-from unittest.mock import MagicMock, patch
-
+import httpx
 import pytest
+from unittest.mock import MagicMock, patch
 
 from app.models import VideoGenerationRequest, VideoResolution
 from app.services.azure_openai import AzureOpenAIService
@@ -13,10 +13,6 @@ def azure_service(mock_env_vars):
     """Create an Azure OpenAI service instance for testing."""
     with patch("app.services.azure_openai.AzureOpenAI"):
         service = AzureOpenAIService()
-        # Mock nested client.videos.generate for all tests
-        service.client = MagicMock()
-        service.client.videos = MagicMock()
-        service.client.videos.generate = MagicMock()
         return service
 
 
@@ -39,7 +35,21 @@ async def test_generate_video_success(azure_service: AzureOpenAIService):
         assert azure_service.video_jobs[video_id].status == "pending"
 
 
-def test_call_sora_api_success(azure_service: AzureOpenAIService):
+def test_parse_resolution(azure_service: AzureOpenAIService):
+    """Test resolution parsing."""
+    # Test valid resolutions
+    assert azure_service._parse_resolution("1920x1080") == (1920, 1080)
+    assert azure_service._parse_resolution("1280x720") == (1280, 720)
+    assert azure_service._parse_resolution("1080x1920") == (1080, 1920)
+    
+    # Test invalid resolution - should default to HD
+    assert azure_service._parse_resolution("invalid") == (1920, 1080)
+    assert azure_service._parse_resolution("") == (1920, 1080)
+    assert azure_service._parse_resolution("1920") == (1920, 1080)
+
+
+@patch('httpx.Client')
+def test_call_sora_api_success(mock_client_class, azure_service: AzureOpenAIService):
     """Test successful Sora API call."""
     request = VideoGenerationRequest(
         prompt="A beautiful sunset",
@@ -47,15 +57,25 @@ def test_call_sora_api_success(azure_service: AzureOpenAIService):
         duration=5,
     )
 
-    # Mock the API response
-    mock_video_data = MagicMock()
-    mock_video_data.url = "http://example.com/video.mp4"
-    mock_video_data.revised_prompt = "A beautiful sunset over calm waters"
-
-    mock_response = MagicMock()
-    mock_response.data = [mock_video_data]
-
-    azure_service.client.videos.generate.return_value = mock_response
+    # Mock the HTTP client and responses
+    mock_client = MagicMock()
+    mock_client_class.return_value.__enter__.return_value = mock_client
+    
+    # Mock job submission response
+    mock_submit_response = MagicMock()
+    mock_submit_response.json.return_value = {"id": "job-123"}
+    mock_client.post.return_value = mock_submit_response
+    
+    # Mock job polling response (completed)
+    mock_poll_response = MagicMock()
+    mock_poll_response.json.return_value = {
+        "status": "succeeded",
+        "outputs": [{
+            "url": "http://example.com/video.mp4"
+        }],
+        "revised_prompt": "A beautiful sunset over calm waters"
+    }
+    mock_client.get.return_value = mock_poll_response
 
     result = azure_service._call_sora_api(request)
 
@@ -63,11 +83,13 @@ def test_call_sora_api_success(azure_service: AzureOpenAIService):
     assert result["video_url"] == "http://example.com/video.mp4"
     assert result["revised_prompt"] == "A beautiful sunset over calm waters"
 
-    # Verify the API was called with correct parameters
-    azure_service.client.videos.generate.assert_called_once()
+    # Verify the HTTP calls were made
+    mock_client.post.assert_called_once()
+    mock_client.get.assert_called_once()
 
 
-def test_call_sora_api_failure(azure_service: AzureOpenAIService):
+@patch('httpx.Client')
+def test_call_sora_api_failure(mock_client_class, azure_service: AzureOpenAIService):
     """Test Sora API call failure."""
     request = VideoGenerationRequest(
         prompt="A beautiful sunset",
@@ -75,10 +97,48 @@ def test_call_sora_api_failure(azure_service: AzureOpenAIService):
         duration=5,
     )
 
-    # Mock API exception
-    azure_service.client.videos.generate.side_effect = Exception("API Error")
+    # Mock the HTTP client to raise an exception
+    mock_client = MagicMock()
+    mock_client_class.return_value.__enter__.return_value = mock_client
+    mock_client.post.side_effect = httpx.HTTPStatusError(
+        "API Error", request=MagicMock(), response=MagicMock()
+    )
 
-    with pytest.raises(Exception, match="API Error"):
+    with pytest.raises(httpx.HTTPStatusError):
+        azure_service._call_sora_api(request)
+
+
+@patch('httpx.Client')
+def test_call_sora_api_job_failed(mock_client_class, azure_service: AzureOpenAIService):
+    """Test Sora API call when job fails."""
+    request = VideoGenerationRequest(
+        prompt="A beautiful sunset",
+        resolution=VideoResolution.RES_1920x1080,
+        duration=5,
+    )
+
+    # Mock the HTTP client and responses
+    mock_client = MagicMock()
+    mock_client_class.return_value.__enter__.return_value = mock_client
+    
+    # Mock job submission response
+    mock_submit_response = MagicMock()
+    mock_submit_response.json.return_value = {"id": "job-123"}
+    mock_client.post.return_value = mock_submit_response
+    
+    # Mock job polling response (failed)
+    mock_poll_response = MagicMock()
+    mock_poll_response.json.return_value = {
+    "status": "failed",
+    "error": {
+        "message": "Video generation failed due to content policy",
+    },
+}
+
+    with pytest.raises(
+        Exception,
+        match="Video generation failed: Video generation failed due to content policy",
+    ):
         azure_service._call_sora_api(request)
 
 
