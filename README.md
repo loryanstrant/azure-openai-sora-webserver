@@ -28,7 +28,7 @@ A production-ready, containerized web server that connects to Azure OpenAI's Sor
 |----------|-------------|----------|---------|
 | `AZURE_OPENAI_API_KEY` | Your Azure OpenAI API key | Yes | - |
 | `AZURE_OPENAI_ENDPOINT` | Your Azure OpenAI endpoint URL | Yes | - |
-| `AZURE_OPENAI_API_VERSION` | API version | No | `2024-08-01-preview` |
+| `AZURE_OPENAI_API_VERSION` | API version | No | `2024-12-01-preview` |
 
 ## 🏗️ Installation & Setup
 
@@ -49,7 +49,7 @@ A production-ready, containerized web server that connects to Azure OpenAI's Sor
    ```bash
    export AZURE_OPENAI_API_KEY="your-api-key"
    export AZURE_OPENAI_ENDPOINT="https://your-instance.openai.azure.com/"
-   export AZURE_OPENAI_API_VERSION="2024-08-01-preview"
+   export AZURE_OPENAI_API_VERSION="2024-12-01-preview"
    ```
 
 4. **Run the application**
