@@ -1,0 +1,24 @@
+# Development and testing dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Testing
+pytest==8.4.1
+pytest-asyncio==1.1.0
+pytest-cov==6.0.0
+
+# Code Quality
+black==24.10.0
+isort==5.13.2
+flake8==7.1.1
+mypy==1.13.0
+
+# Security
+bandit==1.8.0
+safety==3.2.11
+
+# Documentation
+sphinx==8.2.0
+sphinx-rtd-theme==3.0.2
+
+# Utilities
+pre-commit==4.0.1
