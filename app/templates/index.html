@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure OpenAI Sora Video Generator</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-video"></i> Azure OpenAI Sora Video Generator</h1>
+            <p>Generate amazing videos using Azure OpenAI's Sora model</p>
+        </header>
+
+        <main class="main-content">
+            <div class="form-container">
+                <form id="videoForm" class="video-form">
+                    <div class="form-group">
+                        <label for="prompt">
+                            <i class="fas fa-edit"></i> Video Prompt
+                        </label>
+                        <textarea 
+                            id="prompt" 
+                            name="prompt" 
+                            placeholder="Describe the video you want to generate..." 
+                            maxlength="1000" 
+                            required
+                        ></textarea>
+                        <div class="char-counter">
+                            <span id="charCount">0</span>/1000 characters
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="resolution">
+                                <i class="fas fa-expand-arrows-alt"></i> Resolution
+                            </label>
+                            <select id="resolution" name="resolution" required>
+                                <option value="1920x1080">1920x1080 (Landscape)</option>
+                                <option value="1080x1920">1080x1920 (Portrait)</option>
+                                <option value="1280x720">1280x720 (HD Landscape)</option>
+                                <option value="720x1280">720x1280 (HD Portrait)</option>
+                                <option value="1024x1024">1024x1024 (Square)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="duration">
+                                <i class="fas fa-clock"></i> Duration: <span id="durationValue">{{ default_video_length }}</span>s
+                            </label>
+                            <input 
+                                type="range" 
+                                id="duration" 
+                                name="duration" 
+                                min="1" 
+                                max="{{ max_video_length }}" 
+                                value="{{ default_video_length }}"
+                                class="slider"
+                            >
+                            <div class="slider-labels">
+                                <span>1s</span>
+                                <span>{{ max_video_length }}s</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="generateBtn" class="generate-btn">
+                        <i class="fas fa-play"></i> Generate Video
+                    </button>
+                </form>
+
+                <div id="loadingContainer" class="loading-container" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">
+                        <h3>Generating your video...</h3>
+                        <p id="statusText">Initializing...</p>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <div id="progressPercent" class="progress-percent">0%</div>
+                    </div>
+                </div>
+
+                <div id="resultContainer" class="result-container" style="display: none;">
+                    <h3><i class="fas fa-check-circle"></i> Video Generated Successfully!</h3>
+                    <div class="video-container">
+                        <video id="generatedVideo" controls style="display: none;">
+                            Your browser does not support the video tag.
+                        </video>
+                        <div id="downloadSection" style="display: none;">
+                            <a id="downloadLink" href="#" download class="download-btn">
+                                <i class="fas fa-download"></i> Download Video
+                            </a>
+                        </div>
+                    </div>
+                    <button id="generateNewBtn" class="generate-new-btn">
+                        <i class="fas fa-plus"></i> Generate Another Video
+                    </button>
+                </div>
+
+                <div id="errorContainer" class="error-container" style="display: none;">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+                    <p id="errorMessage"></p>
+                    <button id="retryBtn" class="retry-btn">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2024 Azure OpenAI Sora Video Generator. Powered by Azure OpenAI.</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

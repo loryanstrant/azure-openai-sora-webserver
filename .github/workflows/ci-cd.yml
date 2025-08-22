@@ -1,0 +1,147 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+
+    - name: Test with pytest
+      env:
+        AZURE_OPENAI_ENDPOINT: https://test.openai.azure.com/
+        AZURE_OPENAI_DEPLOYMENT_NAME: test-sora
+        AZURE_OPENAI_API_KEY: test-key
+        AZURE_OPENAI_API_VERSION: 2024-02-01
+      run: |
+        pytest tests/ -v --tb=short
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+
+    - name: Run security checks with bandit
+      run: |
+        bandit -r app/ -f json -o bandit-report.json || true
+
+    - name: Check dependencies with safety
+      run: |
+        safety check --json --output safety-report.json || true
+
+  build-and-push:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+    - name: Test Docker image
+      run: |
+        docker run --rm \
+          -e AZURE_OPENAI_ENDPOINT=https://test.openai.azure.com/ \
+          -e AZURE_OPENAI_DEPLOYMENT_NAME=test-sora \
+          -e AZURE_OPENAI_API_KEY=test-key \
+          -e AZURE_OPENAI_API_VERSION=2024-02-01 \
+          --health-cmd="curl -f http://localhost:8000/health || exit 1" \
+          --health-interval=30s \
+          --health-timeout=10s \
+          --health-retries=3 \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest &
+        
+        # Wait for container to be healthy
+        sleep 45
+        
+        # Test the health endpoint
+        docker ps
+        
+        # Stop the container
+        docker stop $(docker ps -q --filter ancestor=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest)
+
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+    - name: Deploy to staging
+      run: |
+        echo "Deployment to staging would happen here"
+        echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        # In a real scenario, this would deploy to your staging environment
+        # using tools like kubectl, docker-compose, or cloud provider CLIs
