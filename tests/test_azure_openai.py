@@ -1,9 +1,8 @@
 """Tests for Azure OpenAI service."""
 
-from unittest.mock import MagicMock, patch
 import httpx
-
 import pytest
+from unittest.mock import MagicMock, patch
 
 from app.models import VideoGenerationRequest, VideoResolution
 from app.services.azure_openai import AzureOpenAIService
