@@ -1,0 +1,17 @@
+# Core web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Data validation and settings management
+pydantic>=2.4.0
+
+# Azure OpenAI client
+openai>=1.30.0
+
+# Testing dependencies
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.25.0
+
+# Development dependencies
+python-dotenv>=1.0.0
