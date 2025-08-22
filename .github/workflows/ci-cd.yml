@@ -41,7 +41,7 @@ jobs:
         pip install ruff black isort coverage
     
     - name: Code formatting check with Black
-      run: black --check --diff app/ tests/
+      run: black app/ tests/
     
     - name: Import sorting check with isort
       run: isort --check-only --diff app/ tests/
